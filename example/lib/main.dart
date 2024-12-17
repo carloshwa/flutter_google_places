@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'dart:js_interop';
 import 'dart:math';
 
-import 'package:google_api_headers/google_api_headers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_google_places/flutter_google_places.dart';
-import 'package:google_maps_webservice/places.dart';
+import 'package:google_maps/google_maps.dart' as Maps;
+import 'package:google_maps/google_maps_places.dart' as Places;
 
 const kGoogleApiKey = "API_KEY";
 
@@ -99,16 +100,16 @@ class _MyAppState extends State<MyApp> {
         },
       );
 
-  void onError(PlacesAutocompleteResponse response) {
+  void onError(Places.AutocompleteResponse response) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(response.errorMessage!)),
+      SnackBar(content: Text(response.toString()!)),
     );
   }
 
   Future<void> _handlePressButton() async {
     // show input autocomplete with selected mode
     // then get the Prediction selected
-    Prediction? p = await PlacesAutocomplete.show(
+    Places.AutocompletePrediction? p = await PlacesAutocomplete.show(
       context: context,
       apiKey: kGoogleApiKey,
       onError: onError,
@@ -123,24 +124,23 @@ class _MyAppState extends State<MyApp> {
           ),
         ),
       ),
-      components: [Component(Component.country, "fr")],
+      components: Places.ComponentRestrictions()..country = "fr" as JSAny?,
     );
 
     displayPrediction(p, context);
   }
 }
 
-Future<void> displayPrediction(Prediction? p, BuildContext context) async {
+Future<void> displayPrediction(Places.AutocompletePrediction? p, BuildContext context) async {
   if (p != null) {
     // get detail (lat/lng)
-    GoogleMapsPlaces _places = GoogleMapsPlaces(
-      apiKey: kGoogleApiKey,
-      apiHeaders: await const GoogleApiHeaders().getHeaders(),
-    );
-    PlacesDetailsResponse detail =
-        await _places.getDetailsByPlaceId(p.placeId!);
-    final lat = detail.result.geometry!.location.lat;
-    final lng = detail.result.geometry!.location.lng;
+    final place = Places.Place(Places.PlaceOptions(id: p.placeId));
+      place.fetchFields(Places.FetchFieldsRequest(
+      fields: JSArray()..add("location" as JSAny?)
+    ));
+
+    final lat = place.location!.lat;
+    final lng = place.location!.lng;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("${p.description} - $lat/$lng")),
@@ -156,9 +156,9 @@ class CustomSearchScaffold extends PlacesAutocompleteWidget {
       : super(
           key: key,
           apiKey: kGoogleApiKey,
-          sessionToken: Uuid().generateV4(),
+          sessionToken: Places.AutocompleteSessionToken(),
           language: "en",
-          components: [Component(Component.country, "uk")],
+          components: Places.ComponentRestrictions()..country = "uk" as JSAny?,
         );
 
   @override
@@ -182,15 +182,15 @@ class _CustomSearchScaffoldState extends PlacesAutocompleteState {
   }
 
   @override
-  void onResponseError(PlacesAutocompleteResponse response) {
+  void onResponseError(Places.AutocompleteResponse response) {
     super.onResponseError(response);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(response.errorMessage!)),
+      SnackBar(content: Text(response.toString()!)),
     );
   }
 
   @override
-  void onResponse(PlacesAutocompleteResponse? response) {
+  void onResponse(Places.AutocompleteResponse? response) {
     super.onResponse(response);
     if (response != null && response.predictions.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

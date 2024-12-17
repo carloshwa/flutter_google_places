@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_google_places/src/flutter_google_places.dart';
-import 'package:google_maps_webservice/places.dart';
+import 'package:google_maps/google_maps.dart' as Maps;
+import 'package:google_maps/google_maps_places.dart' as Places;
 
 /// A text field like widget to input places with autocomplete.
 ///
@@ -115,13 +116,13 @@ class PlacesAutocompleteField extends StatefulWidget {
 
   final String? language;
 
-  final String? sessionToken;
+  final Places.AutocompleteSessionToken? sessionToken;
 
   final List<String>? types;
 
-  final List<Component>? components;
+  final Places.ComponentRestrictions? components;
 
-  final Location? location;
+  final Maps.LatLng? location;
 
   final num? radius;
 
@@ -131,10 +132,10 @@ class PlacesAutocompleteField extends StatefulWidget {
   final ValueChanged<String?>? onChanged;
 
   /// Called when an autocomplete entry is selected.
-  final ValueChanged<Prediction>? onSelected;
+  final ValueChanged<Places.AutocompletePrediction>? onSelected;
 
   /// Callback when autocomplete has error.
-  final ValueChanged<PlacesAutocompleteResponse>? onError;
+  final ValueChanged<Places.AutocompleteResponse>? onError;
 
   final BorderRadius? overlayBorderRadius;
 
@@ -172,7 +173,7 @@ class LocationAutocompleteFieldState extends State<PlacesAutocompleteField> {
     }
   }
 
-  Future<Prediction?> _showAutocomplete() async => PlacesAutocomplete.show(
+  Future<Places.AutocompletePrediction?> _showAutocomplete() async => PlacesAutocomplete.show(
         context: context,
         apiKey: widget.apiKey,
         offset: widget.offset,
@@ -191,7 +192,7 @@ class LocationAutocompleteFieldState extends State<PlacesAutocompleteField> {
       );
 
   Future<void> _handleTap() async {
-    final Prediction? p = await _showAutocomplete();
+    final Places.AutocompletePrediction? p = await _showAutocomplete();
 
     if (p == null) return;
 

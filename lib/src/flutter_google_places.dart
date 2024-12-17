@@ -3,28 +3,29 @@ library flutter_google_places.src;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_api_headers/google_api_headers.dart';
-import 'package:google_maps_webservice/places.dart';
+import 'package:google_maps/google_maps.dart' as Maps;
+import 'package:google_maps/google_maps_places.dart' as Places;
 import 'package:http/http.dart';
 import 'package:rxdart/rxdart.dart';
+
 
 class PlacesAutocompleteWidget extends StatefulWidget {
   final String apiKey;
   final String? startText;
   final String hint;
   final BorderRadius? overlayBorderRadius;
-  final Location? location;
+  final Maps.LatLng? location;
   final num? offset;
   final num? radius;
   final String? language;
-  final String? sessionToken;
+  final Places.AutocompleteSessionToken? sessionToken;
   final List<String>? types;
-  final List<Component>? components;
+  final Places.ComponentRestrictions? components;
   final bool? strictbounds;
   final String? region;
   final Mode mode;
   final Widget? logo;
-  final ValueChanged<PlacesAutocompleteResponse>? onError;
+  final ValueChanged<Places.AutocompleteResponse>? onError;
   final int debounce;
   final InputDecoration? decoration;
   final TextStyle? textStyle;
@@ -254,7 +255,7 @@ class _Loader extends StatelessWidget {
 }
 
 class PlacesAutocompleteResult extends StatefulWidget {
-  final ValueChanged<Prediction>? onTap;
+  final ValueChanged<Places.AutocompletePrediction>? onTap;
   final Widget? logo;
   final TextStyle? resultTextStyle;
 
@@ -382,8 +383,8 @@ class PoweredByGoogleImage extends StatelessWidget {
 }
 
 class PredictionsListView extends StatelessWidget {
-  final List<Prediction> predictions;
-  final ValueChanged<Prediction>? onTap;
+  final List<Places.AutocompletePrediction> predictions;
+  final ValueChanged<Places.AutocompletePrediction>? onTap;
   final TextStyle? resultTextStyle;
 
   const PredictionsListView({
@@ -398,7 +399,7 @@ class PredictionsListView extends StatelessWidget {
     return ListView(
       children: predictions
           .map(
-            (Prediction p) => PredictionTile(
+            (Places.AutocompletePrediction p) => PredictionTile(
               prediction: p,
               onTap: onTap,
               resultTextStyle: resultTextStyle,
@@ -410,8 +411,8 @@ class PredictionsListView extends StatelessWidget {
 }
 
 class PredictionTile extends StatelessWidget {
-  final Prediction prediction;
-  final ValueChanged<Prediction>? onTap;
+  final Places.AutocompletePrediction prediction;
+  final ValueChanged<Places.AutocompletePrediction>? onTap;
   final TextStyle? resultTextStyle;
 
   const PredictionTile({
@@ -440,8 +441,8 @@ enum Mode { overlay, fullscreen }
 
 abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
   TextEditingController? _queryTextController;
-  PlacesAutocompleteResponse? _response;
-  GoogleMapsPlaces? _places;
+  Places.AutocompleteResponse? _response;
+  Places.AutocompleteService? _places;
   late bool _searching;
   Timer? _debounce;
 
@@ -466,12 +467,7 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
   }
 
   Future<void> _initPlaces() async {
-    _places = GoogleMapsPlaces(
-      apiKey: widget.apiKey,
-      baseUrl: widget.proxyBaseUrl,
-      httpClient: widget.httpClient,
-      apiHeaders: await const GoogleApiHeaders().getHeaders(),
-    );
+    _places = Places.AutocompleteService();
   }
 
   Future<void> doSearch(String value) async {
@@ -480,25 +476,30 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
         _searching = true;
       });
 
-      final res = await _places!.autocomplete(
-        value,
-        offset: widget.offset,
-        location: widget.location,
-        radius: widget.radius,
-        language: widget.language,
-        sessionToken: widget.sessionToken,
-        types: widget.types ?? [],
-        components: widget.components ?? [],
-        strictbounds: widget.strictbounds ?? false,
-        region: widget.region,
+      final res = await _places!.getPlacePredictions(
+          Places.AutocompletionRequest(
+            input: value,
+          )
       );
+      // final res = await _places!.autocomplete(
+      //   value,
+      //   offset: widget.offset,
+      //   location: widget.location,
+      //   radius: widget.radius,
+      //   language: widget.language,
+      //   sessionToken: widget.sessionToken,
+      //   types: widget.types ?? [],
+      //   components: widget.components ?? [],
+      //   strictbounds: widget.strictbounds ?? false,
+      //   region: widget.region,
+      // );
 
-      if (res.errorMessage?.isNotEmpty == true ||
-          res.status == "REQUEST_DENIED") {
-        onResponseError(res);
-      } else {
+      // if (res.errorMessage?.isNotEmpty == true ||
+      //     res.status == "REQUEST_DENIED") {
+      //   onResponseError(res);
+      // } else {
         onResponse(res);
-      }
+      // }
     } else {
       onResponse(null);
     }
@@ -517,14 +518,14 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
   void dispose() {
     super.dispose();
 
-    _places?.dispose();
+    // _places?.dispose();
     _debounce?.cancel();
     _queryBehavior.close();
     _queryTextController?.removeListener(_onQueryChange);
   }
 
   @mustCallSuper
-  void onResponseError(PlacesAutocompleteResponse res) {
+  void onResponseError(Places.AutocompleteResponse res) {
     if (!mounted) return;
 
     widget.onError?.call(res);
@@ -535,7 +536,7 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
   }
 
   @mustCallSuper
-  void onResponse(PlacesAutocompleteResponse? res) {
+  void onResponse(Places.AutocompleteResponse? res) {
     if (!mounted) return;
 
     setState(() {
@@ -546,23 +547,23 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
 }
 
 class PlacesAutocomplete {
-  static Future<Prediction?> show({
+  static Future<Places.AutocompletePrediction?> show({
     required BuildContext context,
     required String apiKey,
     Mode mode = Mode.fullscreen,
     String hint = "Search",
     BorderRadius? overlayBorderRadius,
     num? offset,
-    Location? location,
+    Maps.LatLng? location,
     num? radius,
     String? language,
-    String? sessionToken,
+    Places.AutocompleteSessionToken? sessionToken,
     List<String>? types,
-    List<Component>? components,
+    Places.ComponentRestrictions? components,
     bool? strictbounds,
     String? region,
     Widget? logo,
-    ValueChanged<PlacesAutocompleteResponse>? onError,
+    ValueChanged<Places.AutocompleteResponse>? onError,
     String? proxyBaseUrl,
     Client? httpClient,
     InputDecoration? decoration,
