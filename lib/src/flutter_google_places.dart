@@ -476,20 +476,21 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
         _searching = true;
       });
 
-      final res = ((await promiseToFuture(
+      final obj = await promiseToFuture(
         Places.AutocompleteSuggestion.fetchAutocompleteSuggestions(
           Places.AutocompleteRequest(
             input: value,
             sessionToken: widget.sessionToken,
           ),
-        )! as JSPromise<JSArray<Places.AutocompleteSuggestion>>,
-      )) as JSArray<Places.AutocompleteSuggestion>)
-          .toDart;
-      // final res = await _places!.getPlacePredictions(
-      //     Places.AutocompletionRequest(
-      //       input: value,
-      //     )
-      // );
+        ) as JSPromise<JSObject>);
+
+      final res = (
+          (
+              (obj as JSObject)
+                  .dartify() as Map
+          )["suggestions"] as JSArray<Places.AutocompleteSuggestion>
+      ).toDart;
+
       // final res = await _places!.autocomplete(
       //   value,
       //   offset: widget.offset,
