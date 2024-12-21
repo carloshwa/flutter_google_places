@@ -60,7 +60,7 @@ class PlacesAutocompleteFormField extends FormField<String> {
     List<String>? types,
     Places.ComponentRestrictions? components,
     bool? strictbounds,
-    ValueChanged<Places.AutocompleteResponse>? onError,
+    ValueChanged<List<Places.AutocompleteSuggestion>>? onError,
     InputDecoration inputDecoration = const InputDecoration(),
     AutovalidateMode autovalidateMode = AutovalidateMode.disabled,
     FormFieldSetter<String>? onSaved,

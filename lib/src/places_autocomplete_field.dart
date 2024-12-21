@@ -132,10 +132,10 @@ class PlacesAutocompleteField extends StatefulWidget {
   final ValueChanged<String?>? onChanged;
 
   /// Called when an autocomplete entry is selected.
-  final ValueChanged<Places.AutocompletePrediction>? onSelected;
+  final ValueChanged<Places.PlacePrediction>? onSelected;
 
   /// Callback when autocomplete has error.
-  final ValueChanged<Places.AutocompleteResponse>? onError;
+  final ValueChanged<List<Places.AutocompleteSuggestion>>? onError;
 
   final BorderRadius? overlayBorderRadius;
 
@@ -173,7 +173,7 @@ class LocationAutocompleteFieldState extends State<PlacesAutocompleteField> {
     }
   }
 
-  Future<Places.AutocompletePrediction?> _showAutocomplete() async => PlacesAutocomplete.show(
+  Future<Places.PlacePrediction?> _showAutocomplete() async => PlacesAutocomplete.show(
         context: context,
         apiKey: widget.apiKey,
         offset: widget.offset,
@@ -192,13 +192,13 @@ class LocationAutocompleteFieldState extends State<PlacesAutocompleteField> {
       );
 
   Future<void> _handleTap() async {
-    final Places.AutocompletePrediction? p = await _showAutocomplete();
+    final Places.PlacePrediction? p = await _showAutocomplete();
 
     if (p == null) return;
 
     setState(() {
-      _effectiveController!.text = p.description!;
-      widget.onChanged?.call(p.description);
+      _effectiveController!.text = p.text.text!; // TODO
+      widget.onChanged?.call(p.text.text);
       widget.onSelected?.call(p);
     });
   }

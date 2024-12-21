@@ -7,6 +7,8 @@ import 'package:google_maps/google_maps.dart' as Maps;
 import 'package:google_maps/google_maps_places.dart' as Places;
 import 'package:http/http.dart';
 import 'package:rxdart/rxdart.dart';
+import 'dart:js_interop';
+import 'dart:js_util';
 
 
 class PlacesAutocompleteWidget extends StatefulWidget {
@@ -25,7 +27,7 @@ class PlacesAutocompleteWidget extends StatefulWidget {
   final String? region;
   final Mode mode;
   final Widget? logo;
-  final ValueChanged<Places.AutocompleteResponse>? onError;
+  final ValueChanged<List<Places.AutocompleteSuggestion>>? onError;
   final int debounce;
   final InputDecoration? decoration;
   final TextStyle? textStyle;
@@ -164,7 +166,7 @@ class _PlacesAutocompleteOverlayState extends PlacesAutocompleteState {
         );
       } else if (_queryTextController!.text.isEmpty ||
           _response == null ||
-          _response!.predictions.isEmpty) {
+          _response!.isEmpty) {
         body = Material(
           color: theme.dialogBackgroundColor,
           borderRadius: BorderRadius.only(
@@ -182,10 +184,10 @@ class _PlacesAutocompleteOverlayState extends PlacesAutocompleteState {
             ),
             color: theme.dialogBackgroundColor,
             child: ListBody(
-              children: _response!.predictions
+              children: _response!
                   .map(
                     (p) => PredictionTile(
-                      prediction: p,
+                      prediction: p.placePrediction!,
                       onTap: Navigator.of(context).pop,
                       resultTextStyle: widget.resultTextStyle,
                     ),
@@ -255,7 +257,7 @@ class _Loader extends StatelessWidget {
 }
 
 class PlacesAutocompleteResult extends StatefulWidget {
-  final ValueChanged<Places.AutocompletePrediction>? onTap;
+  final ValueChanged<Places.PlacePrediction>? onTap;
   final Widget? logo;
   final TextStyle? resultTextStyle;
 
@@ -278,7 +280,7 @@ class PlacesAutocompleteResultState extends State<PlacesAutocompleteResult> {
 
     if (state._queryTextController!.text.isEmpty ||
         state._response == null ||
-        state._response!.predictions.isEmpty) {
+        state._response!.isEmpty) {
       final children = <Widget>[];
       if (state._searching) {
         children.add(_Loader());
@@ -287,7 +289,7 @@ class PlacesAutocompleteResultState extends State<PlacesAutocompleteResult> {
       return Stack(children: children);
     }
     return PredictionsListView(
-      predictions: state._response!.predictions,
+      predictions: state._response!.map((suggestion) => suggestion.placePrediction!).toList(),
       onTap: widget.onTap,
       resultTextStyle: widget.resultTextStyle,
     );
@@ -383,8 +385,8 @@ class PoweredByGoogleImage extends StatelessWidget {
 }
 
 class PredictionsListView extends StatelessWidget {
-  final List<Places.AutocompletePrediction> predictions;
-  final ValueChanged<Places.AutocompletePrediction>? onTap;
+  final List<Places.PlacePrediction> predictions;
+  final ValueChanged<Places.PlacePrediction>? onTap;
   final TextStyle? resultTextStyle;
 
   const PredictionsListView({
@@ -399,7 +401,7 @@ class PredictionsListView extends StatelessWidget {
     return ListView(
       children: predictions
           .map(
-            (Places.AutocompletePrediction p) => PredictionTile(
+            (Places.PlacePrediction p) => PredictionTile(
               prediction: p,
               onTap: onTap,
               resultTextStyle: resultTextStyle,
@@ -411,8 +413,8 @@ class PredictionsListView extends StatelessWidget {
 }
 
 class PredictionTile extends StatelessWidget {
-  final Places.AutocompletePrediction prediction;
-  final ValueChanged<Places.AutocompletePrediction>? onTap;
+  final Places.PlacePrediction prediction;
+  final ValueChanged<Places.PlacePrediction>? onTap;
   final TextStyle? resultTextStyle;
 
   const PredictionTile({
@@ -427,7 +429,7 @@ class PredictionTile extends StatelessWidget {
     return ListTile(
       leading: const Icon(Icons.location_on),
       title: Text(
-        prediction.description!,
+        prediction.text.text,
         style: resultTextStyle ?? Theme.of(context).textTheme.bodyMedium,
       ),
       onTap: () {
@@ -441,8 +443,7 @@ enum Mode { overlay, fullscreen }
 
 abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
   TextEditingController? _queryTextController;
-  Places.AutocompleteResponse? _response;
-  Places.AutocompleteService? _places;
+  List<Places.AutocompleteSuggestion>? _response;
   late bool _searching;
   Timer? _debounce;
 
@@ -467,20 +468,28 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
   }
 
   Future<void> _initPlaces() async {
-    _places = Places.AutocompleteService();
   }
 
   Future<void> doSearch(String value) async {
-    if (mounted && value.isNotEmpty && _places != null) {
+    if (mounted && value.isNotEmpty) {
       setState(() {
         _searching = true;
       });
 
-      final res = await _places!.getPlacePredictions(
-          Places.AutocompletionRequest(
+      final res = ((await promiseToFuture(
+        Places.AutocompleteSuggestion.fetchAutocompleteSuggestions(
+          Places.AutocompleteRequest(
             input: value,
-          )
-      );
+            sessionToken: widget.sessionToken,
+          ),
+        )! as JSPromise<JSArray<Places.AutocompleteSuggestion>>,
+      )) as JSArray<Places.AutocompleteSuggestion>)
+          .toDart;
+      // final res = await _places!.getPlacePredictions(
+      //     Places.AutocompletionRequest(
+      //       input: value,
+      //     )
+      // );
       // final res = await _places!.autocomplete(
       //   value,
       //   offset: widget.offset,
@@ -525,7 +534,7 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
   }
 
   @mustCallSuper
-  void onResponseError(Places.AutocompleteResponse res) {
+  void onResponseError(List<Places.AutocompleteSuggestion> res) {
     if (!mounted) return;
 
     widget.onError?.call(res);
@@ -536,7 +545,7 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
   }
 
   @mustCallSuper
-  void onResponse(Places.AutocompleteResponse? res) {
+  void onResponse(List<Places.AutocompleteSuggestion>? res) {
     if (!mounted) return;
 
     setState(() {
@@ -547,7 +556,7 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
 }
 
 class PlacesAutocomplete {
-  static Future<Places.AutocompletePrediction?> show({
+  static Future<Places.PlacePrediction?> show({
     required BuildContext context,
     required String apiKey,
     Mode mode = Mode.fullscreen,
@@ -563,7 +572,7 @@ class PlacesAutocomplete {
     bool? strictbounds,
     String? region,
     Widget? logo,
-    ValueChanged<Places.AutocompleteResponse>? onError,
+    ValueChanged<List<Places.AutocompleteSuggestion>>? onError,
     String? proxyBaseUrl,
     Client? httpClient,
     InputDecoration? decoration,

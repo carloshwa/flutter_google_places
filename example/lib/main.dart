@@ -100,7 +100,7 @@ class _MyAppState extends State<MyApp> {
         },
       );
 
-  void onError(Places.AutocompleteResponse response) {
+  void onError(List<Places.AutocompleteSuggestion> response) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(response.toString()!)),
     );
@@ -109,7 +109,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> _handlePressButton() async {
     // show input autocomplete with selected mode
     // then get the Prediction selected
-    Places.AutocompletePrediction? p = await PlacesAutocomplete.show(
+    Places.PlacePrediction? p = await PlacesAutocomplete.show(
       context: context,
       apiKey: kGoogleApiKey,
       onError: onError,
@@ -131,19 +131,19 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-Future<void> displayPrediction(Places.AutocompletePrediction? p, BuildContext context) async {
+Future<void> displayPrediction(Places.PlacePrediction? p, BuildContext context) async {
   if (p != null) {
     // get detail (lat/lng)
-    final place = Places.Place(Places.PlaceOptions(id: p.placeId));
-      place.fetchFields(Places.FetchFieldsRequest(
-      fields: JSArray()..add("location" as JSAny?)
+    final place = p.toPlace();
+    place.fetchFields(Places.FetchFieldsRequest(
+      fields: ["location".toJS].toJS
     ));
 
     final lat = place.location!.lat;
     final lng = place.location!.lng;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("${p.description} - $lat/$lng")),
+      SnackBar(content: Text("${p.text.text} - $lat/$lng")),
     );
   }
 }
@@ -182,7 +182,7 @@ class _CustomSearchScaffoldState extends PlacesAutocompleteState {
   }
 
   @override
-  void onResponseError(Places.AutocompleteResponse response) {
+  void onResponseError(List<Places.AutocompleteSuggestion> response) {
     super.onResponseError(response);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(response.toString()!)),
@@ -190,9 +190,9 @@ class _CustomSearchScaffoldState extends PlacesAutocompleteState {
   }
 
   @override
-  void onResponse(Places.AutocompleteResponse? response) {
+  void onResponse(List<Places.AutocompleteSuggestion>? response) {
     super.onResponse(response);
-    if (response != null && response.predictions.isNotEmpty) {
+    if (response != null && response.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Got answer")),
       );
