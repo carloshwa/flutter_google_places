@@ -5,8 +5,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps/google_maps.dart' as Maps;
 import 'package:google_maps/google_maps_places.dart' as Places;
-import 'package:http/http.dart';
-import 'package:rxdart/rxdart.dart';
+// import 'package:http/http.dart';
+// import 'package:rxdart/rxdart.dart';
 import 'dart:js_interop';
 import 'dart:js_util';
 
@@ -44,7 +44,7 @@ class PlacesAutocompleteWidget extends StatefulWidget {
   ///
   /// In case of using a proxy url that requires authentication
   /// or custom configuration
-  final BaseClient? httpClient;
+  // final BaseClient? httpClient;
 
   /// optional - set 'resultTextStyle' value in google_maps_webservice
   ///
@@ -69,7 +69,7 @@ class PlacesAutocompleteWidget extends StatefulWidget {
     this.onError,
     Key? key,
     this.proxyBaseUrl,
-    this.httpClient,
+    // this.httpClient,
     this.startText,
     this.debounce = 300,
     this.decoration,
@@ -447,7 +447,7 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
   late bool _searching;
   Timer? _debounce;
 
-  final _queryBehavior = BehaviorSubject<String>.seeded('');
+  final _queryBehavior = StreamController<String>()..add(''); //BehaviorSubject<String>.seeded('');
 
   @override
   void initState() {
@@ -575,7 +575,7 @@ class PlacesAutocomplete {
     Widget? logo,
     ValueChanged<List<Places.AutocompleteSuggestion>>? onError,
     String? proxyBaseUrl,
-    Client? httpClient,
+    // Client? httpClient,
     InputDecoration? decoration,
     String startText = "",
     Duration transitionDuration = const Duration(seconds: 300),
@@ -600,7 +600,7 @@ class PlacesAutocomplete {
       logo: logo,
       onError: onError,
       proxyBaseUrl: proxyBaseUrl,
-      httpClient: httpClient as BaseClient?,
+      // httpClient: httpClient as BaseClient?,
       startText: startText,
       decoration: decoration,
       textStyle: textStyle,
