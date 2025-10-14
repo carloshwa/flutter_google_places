@@ -1,14 +1,13 @@
 library flutter_google_places.src;
 
 import 'dart:async';
+// import 'package:http/http.dart';
+// import 'package:rxdart/rxdart.dart';
+import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps/google_maps.dart' as Maps;
 import 'package:google_maps/google_maps_places.dart' as Places;
-// import 'package:http/http.dart';
-// import 'package:rxdart/rxdart.dart';
-import 'dart:js_interop';
-import 'dart:js_util';
 
 
 class PlacesAutocompleteWidget extends StatefulWidget {
@@ -476,13 +475,12 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
         _searching = true;
       });
 
-      final obj = await promiseToFuture(
-        Places.AutocompleteSuggestion.fetchAutocompleteSuggestions(
+      final obj = await (Places.AutocompleteSuggestion.fetchAutocompleteSuggestions(
           Places.AutocompleteRequest(
             input: value,
             sessionToken: widget.sessionToken,
           ),
-        ) as JSPromise<JSObject>);
+        ) as JSPromise<JSObject>).toDart;
 
       final res = (
           (
